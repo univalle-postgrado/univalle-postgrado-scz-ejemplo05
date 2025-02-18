@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Category } from './entities/category.entity';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 
 @Injectable()
 export class CategoriesService {
@@ -12,9 +12,26 @@ export class CategoriesService {
     private categoriesRepository: Repository<Category>,
   ) {}
 
-  create(createCategoryDto: CreateCategoryDto) {
-    const newCategory = this.categoriesRepository.create(createCategoryDto);
-    return this.categoriesRepository.save(newCategory);
+  private async findOneOrFail(id: number): Promise<Category> {
+    const category = await this.categoriesRepository.findOne({
+      where: { id }
+    });
+    if (!category) {
+      throw new NotFoundException(`La categoría con el Id ${id} no existe`);
+    }
+    return category;
+  }
+
+  async create(createCategoryDto: CreateCategoryDto) {
+    const existsCategory = await this.categoriesRepository.exists({
+      where: { 
+        title: createCategoryDto.title
+      }
+    });
+    if (existsCategory) {
+      throw new ConflictException('El título ya está registrado');
+    }
+    return this.categoriesRepository.save(createCategoryDto);
   }
 
   findAll() {
@@ -22,15 +39,38 @@ export class CategoriesService {
   }
 
   findOne(id: number) {
-    return this.categoriesRepository.findOne({ where: { id } });
+    return this.findOneOrFail(id);
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    await this.categoriesRepository.update(id, updateCategoryDto);
-    return this.findOne(id);
+    const category = await this.findOneOrFail(id);
+
+    if (updateCategoryDto.title != null) {
+      const existsCategory = await this.categoriesRepository.exists({
+        where: { 
+          title: updateCategoryDto.title,
+          id: Not(id)
+        }
+      });
+      if (existsCategory) {
+        throw new ConflictException('El título ya está registrado');
+      }
+
+      category.title = updateCategoryDto.title;
+    }
+    if (updateCategoryDto.description != null) {
+      category.description = updateCategoryDto.description;
+    }
+    if (updateCategoryDto.enabled != null) {
+      category.enabled = updateCategoryDto.enabled;
+    }
+
+    return this.categoriesRepository.save(category);
   }
 
   async remove(id: number) {
-    await this.categoriesRepository.delete(id);
+    const category = await this.findOneOrFail(id);
+
+    return this.categoriesRepository.delete(id);
   }
 }
