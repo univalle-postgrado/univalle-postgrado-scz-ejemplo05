@@ -17,15 +17,24 @@ export class MoviesService {
 
   private async findOneOrFail(id: number, relations = false): Promise<Movie> {
     const movie = await this.moviesRepository.findOne({
-      where: { id: id }
+      where: { id },
+      relations: {
+        category: relations ? true : false
+      },
+      select: {
+        category: {
+          id: true,
+          title: true
+        }
+      }
     });
     if (!movie) {
       throw new NotFoundException(`La película con el Id ${id} no existe`);
     }
     return movie;
   }
-  
-  async create(createMovieDto: CreateMovieDto) {
+
+  async create(createMovieDto: CreateMovieDto): Promise<Movie> {
     const existsCategory = await this.categoriesRepository.exists({
       where: { 
         id: createMovieDto.categoryId
@@ -37,15 +46,39 @@ export class MoviesService {
     return this.moviesRepository.save(createMovieDto);
   }
 
-  findAll() {
-    return this.moviesRepository.find();
+  async findAll(page = 1, limit = 10, relations = false): Promise<{ data: Movie[]; total: number; page: number; limit: number }>  {
+    const [data, total] = await this.moviesRepository.findAndCount({
+      skip: page > 0 ? (page - 1) * limit : 0,
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        director: true,
+        releaseDate: true,
+        posterUrl: true,
+        category: {
+          id: true,
+          title: true,
+        }
+      },
+      relations: {
+        category: relations ? true : false
+      }
+    });
+  
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
   }
 
-  findOne(id: number) {
-    return this.findOneOrFail(id);
+  async findOne(id: number, relations: boolean): Promise<Movie> {
+    return this.findOneOrFail(id, relations);
   }
 
-  async update(id: number, updateMovieDto: UpdateMovieDto) {
+  async update(id: number, updateMovieDto: UpdateMovieDto): Promise<Movie> {
     const movie = await this.findOneOrFail(id);
 
     if (updateMovieDto.title != null) {
@@ -85,5 +118,10 @@ export class MoviesService {
     const movie = await this.findOneOrFail(id);
 
     return this.moviesRepository.delete(id);
+  }
+
+  async findCategory(id: number): Promise<Category> {
+    const movie = await this.findOneOrFail(id, true);
+    return movie.category;
   }
 }

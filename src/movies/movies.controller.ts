@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, DefaultValuePipe, Query, ParseBoolPipe } from '@nestjs/common';
 import { MoviesService } from './movies.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
@@ -13,23 +13,35 @@ export class MoviesController {
   }
 
   @Get()
-  findAll() {
-    return this.moviesService.findAll();
+  findAll(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Query('relations', new DefaultValuePipe(false), ParseBoolPipe) relations: boolean,
+  ) {
+    return this.moviesService.findAll(page, limit, relations);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.moviesService.findOne(id);
+  findOne(
+    @Param('id') id: number,
+    @Query('relations', new DefaultValuePipe(false), ParseBoolPipe) relations: boolean,
+  ) {
+    return this.moviesService.findOne(id, relations);
   }
 
   @Patch(':id')
-  update(@Param('id') id: number, @Body() updateMovieDto: UpdateMovieDto) {
-    return this.moviesService.update(id, updateMovieDto);
+  update(@Param('id') id: string, @Body() updateMovieDto: UpdateMovieDto) {
+    return this.moviesService.update(+id, updateMovieDto);
   }
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@Param('id') id: number) {
-    return this.moviesService.remove(id);
+  async remove(@Param('id') id: number) {
+    await this.moviesService.remove(id);
+  }
+
+  @Get(':id/category')
+  findCategory(@Param('id') id: number) {
+    return this.moviesService.findCategory(id);
   }
 }
