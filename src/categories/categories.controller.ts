@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, Query, DefaultValuePipe, ParseBoolPipe } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -13,13 +13,20 @@ export class CategoriesController {
   }
 
   @Get()
-  findAll() {
-    return this.categoriesService.findAll();
+  findAll(
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+    @Query('relations', new DefaultValuePipe(false), ParseBoolPipe) relations: boolean
+  ) {
+    return this.categoriesService.findAll(page, limit, relations);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.categoriesService.findOne(id);
+  findOne(
+    @Param('id') id: number,
+    @Query('relations', new DefaultValuePipe(false), ParseBoolPipe) relations: boolean
+  ) {
+    return this.categoriesService.findOne(id, relations);
   }
 
   @Patch(':id')
@@ -29,7 +36,15 @@ export class CategoriesController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@Param('id') id: number) {
-    return this.categoriesService.remove(id);
+  async remove(
+    @Param('id') id: number,
+    @Query('cascade', new DefaultValuePipe(false), ParseBoolPipe) cascade: boolean,
+  ) {
+    await this.categoriesService.remove(id, cascade);
+  }
+
+  @Get(':id/movies')
+  findMovies(@Param('id') id: number) {
+    return this.categoriesService.findMovies(id);
   }
 }
