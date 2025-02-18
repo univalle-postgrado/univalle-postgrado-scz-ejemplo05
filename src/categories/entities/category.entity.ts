@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from "typeorm";
+import { Movie } from "src/movies/entities/movie.entity";
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from "typeorm";
 
 @Entity('categories')
 @Unique(['title'])
@@ -22,4 +23,6 @@ export class Category {
     @UpdateDateColumn({ type: 'timestamp without time zone', nullable: true })
     updated_at: Date;
 
+    @OneToMany(() => Movie, movie => movie.category)
+    movies: Movie[]
 }
